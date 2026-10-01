@@ -32,12 +32,24 @@ new_segment = time_diff.isna() | (time_diff > 0.11)
 
 특히 20-sample window에서는 길이가 짧은 abnormal segment가 더 많이 제외됩니다. 따라서 현재 데이터에서는 **모델 점수만이 아니라 이상 segment 보존율까지 고려해 10-sample window를 baseline으로 선택**했습니다.
 
-## 3. 아직 남아 있는 한계
+## 3. Window-size sensitivity experiment
 
-0.5초(5 samples), 1초(10 samples), 2초(20 samples)를 동일한 Group CV 조건에서 모두 비교한 성능 민감도 실험은 아직 수행하지 않았습니다. 따라서 1초가 보편적으로 최적이라고 주장하지 않습니다.
+동일한 15개 feature, tuned CatBoost, StratifiedGroupKFold 조건에서 0.5초 / 1초 / 2초 window를 비교했습니다.
 
-추가 검증 시에는 window size별로:
-- usable abnormal segment 수
-- recall / F1 / PR-AUC
-- 오류 segment 변화
-를 함께 비교하는 것이 적절합니다.
+| Window | Abnormal usable segments | Precision | Recall | F1 | F1 std | Balanced Acc. | PR-AUC |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 0.5 s | 18 / 21 | 0.964 | 0.886 | 0.922 | 0.028 | 0.943 | **0.982** |
+| **1.0 s** | **17 / 21** | **0.982** | **0.905** | **0.941** | 0.043 | **0.952** | 0.976 |
+| 2.0 s | 13 / 21 | 1.000 | 0.860 | 0.921 | 0.074 | 0.930 | **0.990** |
+
+### 해석
+
+- **1초 window가 F1, Recall, Balanced Accuracy에서 가장 좋았습니다.**
+- 0.5초 window는 더 많은 abnormal segment를 보존하고 PR-AUC도 높았지만, Recall과 F1은 1초보다 낮았습니다.
+- 2초 window는 precision과 PR-AUC는 높았지만, usable abnormal segment가 13개로 줄고 Recall과 F1이 낮아졌으며 F1 변동성도 가장 컸습니다.
+
+따라서 현재 데이터에서는 **1초 window가 이상 구간 보존과 분류 성능 사이의 균형이 가장 좋았다**고 판단했습니다.
+
+다만 이 비교도 동일 개발 데이터의 Group CV를 사용한 개발 단계 민감도 분석이므로, 1초가 다른 수집 세션이나 실제 설비 환경에서도 최적이라고 일반화하지 않습니다.
+
+원본 결과는 [`results/window_sensitivity_summary.csv`](../results/window_sensitivity_summary.csv)에 저장했습니다.
