@@ -26,8 +26,9 @@
 
 ### 3.2 Windowing & feature engineering
 - 10 samples ≈ 1 second
-- 10-sample window는 abnormal segment 17/21(80.95%), sample 530/600(88.33%)을 보존
-- 20-sample window는 abnormal segment 13/21(61.90%), sample 420/600(70.00%)만 보존해 baseline에서 제외
+- 0.5초 / 1초 / 2초 window를 동일한 Group CV 조건에서 비교
+- **1초 window가 Recall 0.905, F1 0.941, Balanced Accuracy 0.952로 가장 균형이 좋았음**
+- 2초 window는 abnormal usable segment가 13/21로 줄어 정보 손실이 커짐
 - non-overlapping window
 - segment 경계를 넘는 window 생성 금지
 - 센서별 `mean`, `std`, `RMS`, `min`, `max` → 총 15개 feature
@@ -63,7 +64,7 @@ Segment-level mean aggregation에서는 높은 점수가 관찰됐지만 usable 
 
 ![Model comparison](results/figures/model_comparison.svg)
 
-상세 수치는 [`results/summary_metrics.csv`](results/summary_metrics.csv)를 참고하세요.
+상세 수치는 [`results/summary_metrics.csv`](results/summary_metrics.csv)를 참고하세요. Window 길이 민감도 비교는 [`results/window_sensitivity_summary.csv`](results/window_sensitivity_summary.csv)에 별도로 정리했습니다.
 
 ## 5. Error analysis
 
