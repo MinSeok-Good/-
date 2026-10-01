@@ -1,0 +1,4 @@
+window_size,window_seconds_approx,total_windows,normal_windows,abnormal_windows,normal_usable_segments,abnormal_usable_segments,precision_mean,recall_mean,f1_mean,f1_std,balanced_accuracy_mean,pr_auc_mean,pr_auc_std
+5,0.5,3948,3834,114,570,18,0.964476,0.886430,0.921641,0.027579,0.942693,0.982267,0.020213
+10,1.0,1873,1820,53,530,17,0.981818,0.905455,0.940548,0.043223,0.952453,0.976118,0.027065
+20,2.0,749,728,21,452,13,1.000000,0.860000,0.920635,0.073600,0.930000,0.990000,0.022361
