@@ -73,7 +73,7 @@ Segment-level mean aggregation에서는 높은 점수가 관찰됐지만 usable 
 ![Segment 16 transition](results/figures/segment16_transition.svg)
 
 ### Segment 20 — rare / training-composition-sensitive pattern
-진동은 상대적으로 낮지만 전류 level이 정상 분포와 크게 다른 사례였습니다. 반복 split에 따라 예측확률 변동이 커, 유사 abnormal pattern의 학습 포함 여부에 민감한 사례로 관찰했습니다.
+진동은 상대적으로 낮지만 전류 level이 정상 분포와 크게 다른 사례였습니다. 반복 split에 따라 예측확률 변동이 커, 유사 abnormal pattern의 학습 포함 여부에 민감한 사례로 관찰했습니다. 초기 18-feature baseline에서 수행한 local SHAP 오류분석은 [`docs/shap_error_analysis.md`](docs/shap_error_analysis.md)에 별도로 보존했습니다.
 
 ## 6. Operational action plan
 
@@ -114,16 +114,19 @@ press-equipment-anomaly-detection/
 │   ├── evaluate.py
 │   ├── compare_models.py
 │   ├── predict.py
+│   ├── window_sensitivity.py
 │   └── train.py
 ├── models/
 │   └── README.md
 ├── results/
 │   ├── summary_metrics.csv
+│   ├── shap_segment20_baseline18.csv
 │   └── figures/
 ├── tests/
 │   └── test_pipeline.py
 └── docs/
     ├── data_design.md
+    ├── shap_error_analysis.md
     ├── validation_notes.md
     ├── market_research.md
     └── action_plan.md
@@ -149,6 +152,9 @@ python -m src.train --data-dir data --save-model
 ```bash
 # LR / RF / CatBoost baseline comparison
 python -m src.compare_models
+
+# 0.5s / 1s / 2s window 민감도 추가 실험
+python -m src.window_sensitivity
 
 # 핵심 segmentation/window boundary test
 python -m unittest tests.test_pipeline
