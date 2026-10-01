@@ -1,0 +1,5 @@
+model,level,precision,recall,f1,balanced_accuracy,pr_auc,notes
+CatBoost tuned,window,0.976030,0.915094,0.944484,0.957217,0.979440,"Repeated group-aware CV; depth=4, lr=0.03, iterations=400"
+CatBoost tuned,segment_mean_probability,1.000000,0.994118,0.996970,0.997059,,"Development CV; only 17 usable abnormal segments"
+CatBoost baseline,window,0.977587,0.900000,0.937136,0.949698,0.976726,"Repeated group-aware CV"
+CatBoost baseline,segment_mean_probability,1.000000,0.988235,0.993939,0.994118,,"Development CV"
