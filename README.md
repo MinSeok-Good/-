@@ -22,10 +22,12 @@
 ## 3. Approach
 
 ### 3.1 Time-aware segmentation
-인접 `TimeStamp` 간격이 0.11초를 초과하면 새로운 측정 구간(`segment_id`)으로 정의했습니다. 동일 segment의 window가 train/test에 동시에 들어가지 않도록 group 단위로 분할했습니다.
+원본 `TimeStamp` 차이를 확인한 결과 연속 측정은 0.1초에 밀집했고, 0.11초를 초과한 gap의 최소값은 Normal 1.545초, Abnormal 1.780초였습니다. 따라서 0.11초는 0.1초 연속 샘플에 tolerance를 둔 경계값으로 사용했습니다. 동일 segment의 window가 train/test에 동시에 들어가지 않도록 group 단위로 분할했습니다. 자세한 근거는 [`docs/data_design.md`](docs/data_design.md)에 정리했습니다.
 
 ### 3.2 Windowing & feature engineering
 - 10 samples ≈ 1 second
+- 10-sample window는 abnormal segment 17/21(80.95%), sample 530/600(88.33%)을 보존
+- 20-sample window는 abnormal segment 13/21(61.90%), sample 420/600(70.00%)만 보존해 baseline에서 제외
 - non-overlapping window
 - segment 경계를 넘는 window 생성 금지
 - 센서별 `mean`, `std`, `RMS`, `min`, `max` → 총 15개 feature
@@ -43,15 +45,21 @@
 
 ## 4. Results
 
-### Tuned CatBoost
+### 4.1 Baseline model comparison
+동일한 15개 feature와 Group 5-Fold split에서 Logistic Regression, Random Forest, CatBoost를 비교했습니다. 비교 코드는 [`src/compare_models.py`](src/compare_models.py)에 포함했습니다.
+
+| Model | Precision | Recall | F1 | Balanced Accuracy | PR-AUC |
+|---|---:|---:|---:|---:|---:|
+| Logistic Regression | 0.731 | 0.904 | 0.801 | 0.947 | 0.925 |
+| Random Forest | 1.000 | 0.869 | 0.927 | 0.935 | 0.977 |
+| CatBoost | 0.982 | 0.905 | 0.941 | 0.952 | 0.975 |
+
+### 4.2 Tuned CatBoost
 설정: `depth=4`, `learning_rate=0.03`, `iterations=400`, `auto_class_weights='Balanced'`
 
-| Evaluation | Precision | Recall | F1 | Balanced Accuracy | PR-AUC |
-|---|---:|---:|---:|---:|---:|
-| Window-level repeated Group CV | 0.976 | **0.915** | **0.944** | **0.957** | **0.979** |
-| Segment-level mean aggregation | 1.000 | **0.994** | **0.997** | **0.997** | - |
+반복 Group CV에서 window-level F1은 **0.944 ± 0.008**, PR-AUC는 **0.979 ± 0.003**이었습니다. Baseline CatBoost 대비 개선 폭은 F1 `0.937 → 0.944`, PR-AUC `0.977 → 0.979`로 크지 않았습니다. 따라서 이 프로젝트는 과도한 tuning보다 검증 안정성과 오류분석을 더 중요하게 봅니다.
 
-Segment-level 값은 usable abnormal segment가 17개뿐이므로 독립 test 성능처럼 해석하지 않습니다. Baseline 대비 tuned model의 window F1은 `0.937 → 0.944`, PR-AUC는 `0.977 → 0.979`로 소폭 개선됐습니다.
+Segment-level mean aggregation에서는 높은 점수가 관찰됐지만 usable abnormal segment가 17개뿐이므로 메인 성능으로 사용하지 않고 참고 결과로만 해석합니다.
 
 ![Model comparison](results/figures/model_comparison.svg)
 
@@ -93,6 +101,7 @@ Segment-level 값은 usable abnormal segment가 17개뿐이므로 독립 test �
 press-equipment-anomaly-detection/
 ├── README.md
 ├── requirements.txt
+├── requirements-lock.txt
 ├── .gitignore
 ├── data/
 │   └── README.md
@@ -103,13 +112,18 @@ press-equipment-anomaly-detection/
 │   ├── data.py
 │   ├── features.py
 │   ├── evaluate.py
+│   ├── compare_models.py
+│   ├── predict.py
 │   └── train.py
 ├── models/
 │   └── README.md
 ├── results/
 │   ├── summary_metrics.csv
 │   └── figures/
+├── tests/
+│   └── test_pipeline.py
 └── docs/
+    ├── data_design.md
     ├── validation_notes.md
     ├── market_research.md
     └── action_plan.md
@@ -128,11 +142,22 @@ pip install -r requirements.txt
 python -m src.train --data-dir data --save-model
 ```
 
-현재 `requirements.txt`는 notebook import를 기준으로 작성했습니다. 원래 가상환경의 정확한 package version까지 재현하려면 해당 환경에서 다음을 실행해 lock 파일을 추가해야 합니다.
+`requirements.txt`에는 핵심 실행 패키지 버전을 고정했고, 실제 `KAMP 2026` 가상환경의 `pip freeze` 전체 결과는 `requirements-lock.txt`에 보관했습니다.
+
+### Additional commands
 
 ```bash
-pip freeze > requirements-lock.txt
+# LR / RF / CatBoost baseline comparison
+python -m src.compare_models
+
+# 핵심 segmentation/window boundary test
+python -m unittest tests.test_pipeline
+
+# 전체 데이터로 재학습한 artifact를 이용한 신규 CSV 추론
+python -m src.predict --input path/to/new_sensor.csv
 ```
+
+`--save-model`로 저장되는 모델은 CV 평가용 모델 자체가 아니라, 개발 검증 이후 전체 개발 데이터로 재학습한 inference artifact입니다.
 
 ## 10. Notebook
 
